@@ -8,53 +8,49 @@ import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
-    private final SecretKey secretKey;
+    @Value("${jwt.secret}")
+    private String secret;
 
-    public JwtUtil(SecretKey secretKey) {
-        this.secretKey = secretKey;
+//
+
+    public void validateToken( String token) {
+        System.out.println("Validation Key: " + getSignKey().getEncoded());
+        Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token);
     }
 
-    @Value("${jwt.expiration}")
-    private int jwtExpirationMs;
 
 
-    public String generateJwtToken(Authentication authentication) {
-        UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
 
+    public String generateToken(Authentication authentication) {
+
+        CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
+        System.out.println("Generation Key: " + getSignKey().getEncoded());
         return Jwts.builder()
-                .setSubject((userPrincipal.getUsername()))
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(SignatureAlgorithm.HS512, secretKey)
-                .compact();
+
+                .setSubject(userPrincipal.getUsername())
+                .claim("role",userPrincipal.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)
+                .orElse("ROLE_USER"))
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
+                .signWith( SignatureAlgorithm.HS256,getSignKey()).compact();
+
     }
 
-    public String getUserNameFromJwtToken(String token) {
-        return Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody().getSubject();
-    }
-
-    public boolean validateJwtToken(String authToken) {
-        try {
-            Jwts.parser().setSigningKey(secretKey).parseClaimsJws(authToken);
-            return true;
-        } catch (SignatureException e) {
-            // Log exception
-        } catch (MalformedJwtException e) {
-            // Log exception
-        } catch (ExpiredJwtException e) {
-            // Log exception
-        } catch (UnsupportedJwtException e) {
-            // Log exception
-        } catch (IllegalArgumentException e) {
-            // Log exception
-        }
-        return false;
+    private Key getSignKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

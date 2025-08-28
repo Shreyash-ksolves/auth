@@ -11,6 +11,21 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+//    @Autowired
+//    UserRepository userRepository;
+//
+//    @Autowired
+//    PasswordEncoder passwordEncoder;
+//
+//    public User registerUser(String username, String password, String role) {
+//        if (userRepository.existsByUsername(username)) {
+//            throw new RuntimeException("Username is already taken!");
+//        }
+//
+//        User user = new User(username, passwordEncoder.encode(password), role);
+//        return userRepository.save(user);
+//    }
+
 
     @Autowired
     private UserRepository repository;

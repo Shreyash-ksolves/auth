@@ -1,6 +1,7 @@
 package com.service.auth.services;
 
 
+import com.service.auth.dto.UserAuthDetails;
 import com.service.auth.entity.User;
 import com.service.auth.repository.UserRepository;
 import com.service.auth.security.JwtUtil;
@@ -11,21 +12,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
-//    @Autowired
-//    UserRepository userRepository;
-//
-//    @Autowired
-//    PasswordEncoder passwordEncoder;
-//
-//    public User registerUser(String username, String password, String role) {
-//        if (userRepository.existsByUsername(username)) {
-//            throw new RuntimeException("Username is already taken!");
-//        }
-//
-//        User user = new User(username, passwordEncoder.encode(password), role);
-//        return userRepository.save(user);
-//    }
-
 
     @Autowired
     private UserRepository repository;
@@ -45,8 +31,8 @@ public class AuthService {
         return jwtUtil.generateToken(authentication);
     }
 
-    public void validateToken(String token) {
-        jwtUtil.validateToken(token);
+    public UserAuthDetails validateToken(String token) {
+      return   jwtUtil.validateAndExtractDetails(token);
     }
 
 

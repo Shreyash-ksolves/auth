@@ -1,6 +1,7 @@
 package com.service.auth.controller;
 
 import com.service.auth.dto.LoginRequest;
+import com.service.auth.dto.UserAuthDetails;
 import com.service.auth.entity.User;
 import com.service.auth.services.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +36,8 @@ public class AuthController {
     }
 
     @GetMapping("/validate")
-    public String validateToken(@RequestParam("token") String token) {
-        service.validateToken(token);
-        return "Token is valid";
+    public UserAuthDetails validateToken(@RequestParam("token") String token) {
+        System.out.println("Reacehd here");
+       return service.validateToken(token);
+
     }}

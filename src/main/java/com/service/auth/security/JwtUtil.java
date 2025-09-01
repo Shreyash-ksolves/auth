@@ -1,6 +1,7 @@
 package com.service.auth.security;
 
 
+import com.service.auth.dto.UserAuthDetails;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -26,19 +27,28 @@ public class JwtUtil {
 
 //
 
-    public void validateToken( String token) {
-        System.out.println("Validation Key: " + getSignKey().getEncoded());
-        Jwts.parserBuilder().setSigningKey(getSignKey()).build().parseClaimsJws(token);
+
+
+    public UserAuthDetails validateAndExtractDetails(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSignKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        UserAuthDetails details = new UserAuthDetails();
+        details.setUsername(String.valueOf(claims.getSubject()));   // usually the username
+        details.setRole(claims.get("role", String.class)); // custom claim
+
+        return details;
     }
-
-
 
 
     public String generateToken(Authentication authentication) {
 
         CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
-        System.out.println("Generation Key: " + getSignKey().getEncoded());
         return Jwts.builder()
+
 
                 .setSubject(userPrincipal.getUsername())
                 .claim("role",userPrincipal.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)

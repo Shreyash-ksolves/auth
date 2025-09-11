@@ -33,6 +33,9 @@ public class CustomUserDetails implements UserDetails {
         return authorities;
     }
 
+    public Long getId(){
+        return id;
+    }
 
 
     @Override

@@ -1,7 +1,7 @@
 package com.service.auth.services;
 
 
-import com.service.auth.dto.UserAuthDetails;
+import com.example.common.dto.UserAuthDetails;
 import com.service.auth.entity.User;
 import com.service.auth.repository.UserRepository;
 import com.service.auth.security.JwtUtil;

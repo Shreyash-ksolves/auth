@@ -1,66 +1,63 @@
 package com.service.auth.security;
 
-
-import com.service.auth.dto.UserAuthDetails;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
-
-import org.springframework.context.annotation.Bean;
+import com.example.common.dto.UserAuthDetails;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;
-import java.security.Key;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
-    @Value("${jwt.secret}")
-    private String secret;
 
-//
+    @Autowired
+     RsaKeyLoader keyLoader;
 
-
-
-    public UserAuthDetails validateAndExtractDetails(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(getSignKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        UserAuthDetails details = new UserAuthDetails();
-        details.setUsername(String.valueOf(claims.getSubject()));   // usually the username
-        details.setRole(claims.get("role", String.class)); // custom claim
-
-        return details;
-    }
 
 
     public String generateToken(Authentication authentication) {
+        try {
+            CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
+            PrivateKey privateKey = keyLoader.loadPrivateKey();
 
-        CustomUserDetails userPrincipal = (CustomUserDetails) authentication.getPrincipal();
-        return Jwts.builder()
+            return Jwts.builder()
+                    .setHeaderParam("kid", "my-key-id")
+                    .setSubject(user.getUsername())
+                    .claim("id", user.getId())
+                    .claim("role", user.getAuthorities().stream()
+                            .findFirst().map(GrantedAuthority::getAuthority).orElse("ROLE_USER"))
+                    .setIssuedAt(new Date())
+                    .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
+                    .signWith(privateKey, SignatureAlgorithm.RS256) // ✅ RS256 with private key
+                    .compact();
 
-
-                .setSubject(userPrincipal.getUsername())
-                .claim("role",userPrincipal.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)
-                .orElse("ROLE_USER"))
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 30))
-                .signWith( SignatureAlgorithm.HS256,getSignKey()).compact();
-
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating token", e);
+        }
     }
 
-    private Key getSignKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
-        return Keys.hmacShaKeyFor(keyBytes);
+    public UserAuthDetails validateAndExtractDetails(String token) {
+        try {
+            PublicKey publicKey = keyLoader.loadPublicKey();
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(publicKey) // ✅ verify with public key
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            UserAuthDetails details = new UserAuthDetails();
+            details.setId(claims.get("id", Long.class));
+            details.setRole(claims.get("role", String.class));
+            return details;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid JWT token", e);
+        }
     }
 }
